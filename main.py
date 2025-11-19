@@ -1,4 +1,5 @@
 import simpy
+import matplotlib.pyplot as plt
 from utils import config
 from simulator.simulator import Simulator
 from visualization.visualizer import SimulationVisualizer
@@ -18,13 +19,23 @@ if __name__ == "__main__":
     channel_states = {i: simpy.Resource(env, capacity=1) for i in range(config.NUMBER_OF_DRONES)}
     sim = Simulator(seed=2025, env=env, channel_states=channel_states, n_drones=config.NUMBER_OF_DRONES)
     
-    # Add the visualizer to the simulator
-    # Use 20000 microseconds (0.02s) as the visualization frame interval
-    visualizer = SimulationVisualizer(sim, output_dir=".", vis_frame_interval=20000)
-    visualizer.run_visualization()
-
-    # Run simulation
-    env.run(until=config.SIM_TIME)
+    # Check if we want live visualization (could be a config flag, default to True for now)
+    LIVE_VISUALIZATION = True
     
-    # Finalize visualization
-    visualizer.finalize()
+    if LIVE_VISUALIZATION:
+        from visualization.live_visualizer import LiveVisualizer
+        print("Starting Live Visualization...")
+        viz = LiveVisualizer(sim, env, channel_states)
+        # The visualizer controls the loop via its buttons
+        plt.show(block=True)
+    else:
+        # Add the visualizer to the simulator
+        # Use 20000 microseconds (0.02s) as the visualization frame interval
+        visualizer = SimulationVisualizer(sim, output_dir=".", vis_frame_interval=20000)
+        visualizer.run_visualization()
+
+        # Run simulation
+        env.run(until=config.SIM_TIME)
+        
+        # Finalize visualization
+        visualizer.finalize()

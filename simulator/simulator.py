@@ -73,7 +73,7 @@ class Simulator:
             self.drones.append(drone)
 
         # scatter_plot_with_spherical_obstacles(self)
-        scatter_plot(self)
+        # scatter_plot(self)
 
         self.env.process(self.show_performance())
         self.env.process(self.show_time())
@@ -88,6 +88,14 @@ class Simulator:
     def show_performance(self):
         yield self.env.timeout(self.total_simulation_time - 1)
 
-        scatter_plot(self)
+        # scatter_plot(self)
 
         self.metrics.print_metrics()
+
+    def trigger_formation_change(self):
+        print(f"Simulator: Formation change event triggered at {self.env.now}")
+        # Placeholder for actual formation change logic
+        # For example: switch mobility model of drones
+        for drone in self.drones:
+            # drone.mobility_model = NewMobilityModel(drone)
+            pass
