@@ -80,7 +80,7 @@ class Simulator:
 
     def show_time(self):
         while True:
-            print('At time: ', self.env.now / 1e6, ' s.')
+            # print('At time: ', self.env.now / 1e6, ' s.')
 
             # the simulation process is displayed every 0.5s
             yield self.env.timeout(0.5*1e6)
