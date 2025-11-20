@@ -112,6 +112,7 @@ class SimulationWorker(QThread):
         return {
             'time': self.env.now / 1e6,  # seconds
             'drones': drones_data,
+            'obstacles': [{'pos': obs.center, 'radius': obs.radius} for obs in self.simulator.obstacles],
             'pdr': pdr,
             'latency': avg_latency,
             'jitter': jitter,
@@ -392,6 +393,18 @@ class PyQtGUI(QMainWindow):
         self.btn_export.clicked.connect(self.on_export)
         control_layout.addWidget(self.btn_export)
         
+        # Formation Change button
+        self.btn_formation = QPushButton("⭕ Formation")
+        self.btn_formation.setStyleSheet("background-color: orange; font-weight: bold;")
+        self.btn_formation.clicked.connect(self.on_formation_change)
+        control_layout.addWidget(self.btn_formation)
+        
+        # Add Obstacle button
+        self.btn_obstacle = QPushButton("🪨 Add Obstacle")
+        self.btn_obstacle.setStyleSheet("background-color: brown; color: white; font-weight: bold;")
+        self.btn_obstacle.clicked.connect(self.on_add_obstacle)
+        control_layout.addWidget(self.btn_obstacle)
+        
         # Speed slider
         control_layout.addWidget(QLabel("Speed:"))
         self.speed_slider = QSlider(Qt.Orientation.Horizontal)
@@ -463,7 +476,7 @@ class PyQtGUI(QMainWindow):
             self.update_3d_counter += 1
             if self.update_3d_counter >= self.update_3d_every_n:
                 self.update_3d_counter = 0
-                self.update_3d_topology(data['drones'])
+                self.update_3d_topology(data)
             
             # Update status with UAV energy legend
             green_count = sum(1 for d in data['drones'] if d['energy'] > config.INITIAL_ENERGY * 0.5)
@@ -475,8 +488,9 @@ class PyQtGUI(QMainWindow):
         except Exception as e:
             logger.error(f"Error updating display: {e}", exc_info=True)
         
-    def update_3d_topology(self, drones_data):
+    def update_3d_topology(self, data):
         """Update 3D drone positions and colors - THREAD SAFE"""
+        drones_data = data['drones']
         if not drones_data or len(self.drone_meshes) == 0:
             return
         
@@ -525,6 +539,31 @@ class PyQtGUI(QMainWindow):
             else:
                 # Clear links if none exist
                 self.link_lines.setData(pos=np.array([[0,0,0], [0,0,0]]), color=(0,0,0,0))
+                
+            # Update Obstacles
+            # Check if we need to create meshes for new obstacles
+            if 'obstacles' in data: # Check if obstacles data exists (it might not in first frame)
+                 # We need a list to store obstacle meshes if not already there
+                if not hasattr(self, 'obstacle_meshes'):
+                    self.obstacle_meshes = []
+                
+                obstacles_data = data['obstacles']
+                
+                # Add new meshes if needed
+                while len(self.obstacle_meshes) < len(obstacles_data):
+                    obs_data = obstacles_data[len(self.obstacle_meshes)]
+                    md = gl.MeshData.sphere(rows=10, cols=20, radius=obs_data['radius'])
+                    mesh = gl.GLMeshItem(
+                        meshdata=md,
+                        smooth=True,
+                        color=(1, 0, 0, 0.6),  # Red with transparency
+                        shader='shaded',
+                        glOptions='translucent'
+                    )
+                    mesh.translate(obs_data['pos'][0], obs_data['pos'][1], obs_data['pos'][2])
+                    self.gl_widget.addItem(mesh)
+                    self.obstacle_meshes.append(mesh)
+                    
         except Exception as e:
             logger.error(f"Error updating 3D topology: {e}", exc_info=True)
             # Don't crash - just skip this update
@@ -572,6 +611,16 @@ class PyQtGUI(QMainWindow):
         
         self.status_label.setText(f"Exported to {filename}")
         print(f"Data exported to {filename}")
+        
+    def on_formation_change(self):
+        """Trigger formation change"""
+        self.simulator.trigger_formation_change()
+        self.status_label.setText("Formation Change Triggered!")
+        
+    def on_add_obstacle(self):
+        """Add a random obstacle"""
+        self.simulator.add_obstacle()
+        self.status_label.setText("Obstacle Added!")
         
     def on_simulation_finished(self):
         """Handle simulation completion"""

@@ -55,6 +55,7 @@ class Simulator:
         # start_position = start_coords.get_customized_start_point_3d()
 
         self.drones = []
+        self.obstacles = []  # List to store obstacles
         print('Seed is: ', self.seed)
         for i in range(n_drones):
             if config.HETEROGENEOUS:
@@ -93,9 +94,38 @@ class Simulator:
         self.metrics.print_metrics()
 
     def trigger_formation_change(self):
+        """
+        Trigger drones to move into a circle formation.
+        """
         print(f"Simulator: Formation change event triggered at {self.env.now}")
-        # Placeholder for actual formation change logic
-        # For example: switch mobility model of drones
-        for drone in self.drones:
-            # drone.mobility_model = NewMobilityModel(drone)
-            pass
+        
+        # Circle formation parameters
+        center_x = config.MAP_LENGTH / 2
+        center_y = config.MAP_WIDTH / 2
+        center_z = config.MAP_HEIGHT / 2
+        radius = 150
+        
+        angle_step = 2 * np.pi / len(self.drones)
+        
+        for i, drone in enumerate(self.drones):
+            angle = i * angle_step
+            target_x = center_x + radius * np.cos(angle)
+            target_y = center_y + radius * np.sin(angle)
+            target_z = center_z
+            
+            drone.target_position = [target_x, target_y, target_z]
+            print(f"Drone {drone.identifier} target set to {drone.target_position}")
+
+    def add_obstacle(self):
+        """
+        Add a random spherical obstacle to the environment.
+        """
+        x = random.uniform(0, config.MAP_LENGTH)
+        y = random.uniform(0, config.MAP_WIDTH)
+        z = random.uniform(0, config.MAP_HEIGHT)
+        radius = random.uniform(20, 50)
+        
+        obstacle = SphericalObstacle([x, y, z], radius, obstacle_id=len(self.obstacles) + 1)
+        self.obstacles.append(obstacle)
+        print(f"Added obstacle at ({x:.1f}, {y:.1f}, {z:.1f}) with radius {radius:.1f}")
+        return obstacle

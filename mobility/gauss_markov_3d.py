@@ -75,50 +75,83 @@ class GaussMarkov3D:
             direction_mean = drone.direction_mean
             pitch_mean = drone.pitch_mean
 
-            # update the position of next time step
-            if config.STATIC_CASE == 0:
-                next_position_x = cur_position[0] + cur_velocity[0] * self.position_update_interval / 1e6
-                next_position_y = cur_position[1] + cur_velocity[1] * self.position_update_interval / 1e6
-                next_position_z = cur_position[2] + cur_velocity[2] * self.position_update_interval / 1e6
+            # Check if drone has a target position (Formation Change)
+            if drone.target_position is not None:
+                # Calculate vector to target
+                target_vector = np.array(drone.target_position) - np.array(cur_position)
+                distance = np.linalg.norm(target_vector)
+                
+                if distance < 1.0:  # Reached target
+                    next_velocity = [0, 0, 0]
+                    next_position = drone.target_position
+                    # Optional: Clear target or keep holding position
+                    # drone.target_position = None 
+                else:
+                    # Normalize vector and scale by speed
+                    direction_vector = target_vector / distance
+                    next_velocity = direction_vector * drone.speed
+                    
+                    next_position_x = cur_position[0] + next_velocity[0] * self.position_update_interval / 1e6
+                    next_position_y = cur_position[1] + next_velocity[1] * self.position_update_interval / 1e6
+                    next_position_z = cur_position[2] + next_velocity[2] * self.position_update_interval / 1e6
+                    next_position = [next_position_x, next_position_y, next_position_z]
+                
+                # Update direction/pitch for visualization
+                if distance > 0.1:
+                    next_speed = drone.speed
+                    # Calculate direction (yaw) and pitch from velocity vector
+                    next_direction = math.atan2(next_velocity[1], next_velocity[0])
+                    next_pitch = math.asin(max(-1.0, min(1.0, next_velocity[2] / next_speed))) if next_speed > 0 else 0
+                else:
+                    next_direction = cur_direction
+                    next_pitch = cur_pitch
+                    
             else:
-                next_position_x = cur_position[0]
-                next_position_y = cur_position[1]
-                next_position_z = cur_position[2]
-
-            cur_speed = ((cur_velocity[0] ** 2) + (cur_velocity[1] ** 2) + (cur_velocity[2] ** 2)) ** 0.5
-
-            if env.now % self.direction_update_interval == 0:  # update velocity and direction
-                self.move_counter += 1
-                alpha2 = 1.0 - self.alpha
-                alpha3 = math.sqrt(1.0 - self.alpha * self.alpha)
-
-                next_speed = (self.alpha * cur_speed + alpha2 * velocity_mean +
-                              alpha3 * self.rng_mobility.normalvariate(0, 1))
-
-                next_direction = (self.alpha * cur_direction + alpha2 * direction_mean +
+                # Normal Gauss-Markov Logic
+                # update the position of next time step
+                if config.STATIC_CASE == 0:
+                    next_position_x = cur_position[0] + cur_velocity[0] * self.position_update_interval / 1e6
+                    next_position_y = cur_position[1] + cur_velocity[1] * self.position_update_interval / 1e6
+                    next_position_z = cur_position[2] + cur_velocity[2] * self.position_update_interval / 1e6
+                else:
+                    next_position_x = cur_position[0]
+                    next_position_y = cur_position[1]
+                    next_position_z = cur_position[2]
+    
+                cur_speed = ((cur_velocity[0] ** 2) + (cur_velocity[1] ** 2) + (cur_velocity[2] ** 2)) ** 0.5
+    
+                if env.now % self.direction_update_interval == 0:  # update velocity and direction
+                    self.move_counter += 1
+                    alpha2 = 1.0 - self.alpha
+                    alpha3 = math.sqrt(1.0 - self.alpha * self.alpha)
+    
+                    next_speed = (self.alpha * cur_speed + alpha2 * velocity_mean +
                                   alpha3 * self.rng_mobility.normalvariate(0, 1))
-
-                next_pitch = (self.alpha * cur_pitch + alpha2 * pitch_mean +
-                              alpha3 * self.rng_mobility.normalvariate(0, 1))
-
-                next_velocity_x = next_speed * math.cos(next_direction) * math.cos(next_pitch)
-                next_velocity_y = next_speed * math.sin(next_direction) * math.cos(next_pitch)
-                next_velocity_z = next_speed * math.sin(next_pitch)
-
-                next_position = [next_position_x, next_position_y, next_position_z]
-
-                if drone_id == 1:
-                    self.trajectory.append(next_position)
-
-                next_velocity = [next_velocity_x, next_velocity_y, next_velocity_z]
-            else:
-                next_position = [next_position_x, next_position_y, next_position_z]
-
-                # velocity, direction and pitch should stay the same
-                next_direction = cur_direction
-                next_pitch = cur_pitch
-                next_velocity = cur_velocity
-                next_speed = ((cur_velocity[0] ** 2) + (cur_velocity[1] ** 2) + (cur_velocity[2] ** 2)) ** 0.5
+    
+                    next_direction = (self.alpha * cur_direction + alpha2 * direction_mean +
+                                      alpha3 * self.rng_mobility.normalvariate(0, 1))
+    
+                    next_pitch = (self.alpha * cur_pitch + alpha2 * pitch_mean +
+                                  alpha3 * self.rng_mobility.normalvariate(0, 1))
+    
+                    next_velocity_x = next_speed * math.cos(next_direction) * math.cos(next_pitch)
+                    next_velocity_y = next_speed * math.sin(next_direction) * math.cos(next_pitch)
+                    next_velocity_z = next_speed * math.sin(next_pitch)
+    
+                    next_position = [next_position_x, next_position_y, next_position_z]
+    
+                    if drone_id == 1:
+                        self.trajectory.append(next_position)
+    
+                    next_velocity = [next_velocity_x, next_velocity_y, next_velocity_z]
+                else:
+                    next_position = [next_position_x, next_position_y, next_position_z]
+    
+                    # velocity, direction and pitch should stay the same
+                    next_direction = cur_direction
+                    next_pitch = cur_pitch
+                    next_velocity = cur_velocity
+                    next_speed = ((cur_velocity[0] ** 2) + (cur_velocity[1] ** 2) + (cur_velocity[2] ** 2)) ** 0.5
 
             # wall rebound
             next_position, next_velocity, next_direction, next_pitch, direction_mean, pitch_mean = \
