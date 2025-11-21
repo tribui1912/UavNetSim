@@ -75,7 +75,9 @@ class Drone:
         self.env = env
         self.identifier = node_id
         self.coords = coords
+        self.coords = coords
         self.start_coords = coords
+        self.target_position = None  # Target position for formation change
 
         self.rng_drone = random.Random(self.identifier + self.simulator.seed)
 

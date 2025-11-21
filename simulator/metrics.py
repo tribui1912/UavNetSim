@@ -62,6 +62,13 @@ class Metrics:
         self.hop_cnt_dict[received_packet.packet_id] = received_packet.get_current_ttl()
         self.datapacket_arrived.add(received_packet.packet_id)
 
+    def calculate_jitter(self):
+        """Calculate Jitter (std dev of latency)"""
+        if len(self.deliver_time_dict) > 1:
+            latencies = list(self.deliver_time_dict.values())
+            return np.std(latencies) / 1e3 # in ms
+        return 0.0
+
     def print_metrics(self):
         # calculate the average end-to-end delay
         e2e_delay = np.mean(list(self.deliver_time_dict.values())) / 1e3
