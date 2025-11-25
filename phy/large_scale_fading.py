@@ -1,4 +1,5 @@
 import math
+import random
 from simulator.log import logger
 from utils import config
 from utils.util_function import euclidean_distance_3d, euclidean_distance_2d
@@ -59,6 +60,12 @@ def sinr_calculator(my_drone, main_drones_list, all_transmitting_drones_list):
             simulator.metrics.collision_num += 1
         else:
             pass
+
+        # Simulate random data loss
+        if random.random() < config.DATA_LOSS_PROBABILITY:
+            logger.info('At time: %s (us) ---- Packet loss due to channel error: Main node is: %s',
+                        simulator.env.now, main_drone_id)
+            sinr = -100  # Artificially low SINR to cause drop
 
         logger.info('At time: %s (us) ---- The SINR of main link between UAV (Tx) %s and UAV (Rx) %s is: %s',
                     simulator.env.now, main_drone_id, receiver.identifier, sinr)

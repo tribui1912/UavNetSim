@@ -47,7 +47,14 @@ class EnergyModel:
         self.v0 = config.MEAN_ROTOR_VELOCITY
         self.d0 = config.FUSELAGE_DRAG_RATIO
 
+        self.current_state = 'IDLE'  # IDLE, TX, RX, SLEEP
         self.my_drone.simulator.env.process(self.energy_monitor())
+
+    def set_state(self, state):
+        """Set the current communication state of the drone"""
+        if self.my_drone.sleep:
+            return
+        self.current_state = state
 
     def power_consumption(self, speed):
         p0 = (self.delta / 8) * self.rho * self.s * self.a * (self.omega ** 3) * (self.r ** 3)
@@ -59,30 +66,48 @@ class EnergyModel:
         p = blade_profile + induced + parasite
         return p
 
+    def get_comm_power(self):
+        """Get power consumption based on communication state"""
+        if self.current_state == 'TX':
+            return config.POWER_TX
+        elif self.current_state == 'RX':
+            return config.POWER_RX
+        elif self.current_state == 'SLEEP':
+            return config.POWER_SLEEP
+        else:  # IDLE
+            return config.POWER_IDLE
+
     def energy_monitor(self):
         """Monitoring energy consumption of drone under a certain energy model"""
+        interval = 0.1  # seconds
+        interval_us = interval * 1e6
 
         while True:
-            yield self.my_drone.simulator.env.timeout(1 * 1e5)  # report residual energy every 0.1s
-            if self.my_drone.residual_energy <= config.ENERGY_THRESHOLD:
+            yield self.my_drone.simulator.env.timeout(interval_us)
+            
+            if self.my_drone.sleep:
+                continue
+
+            # Calculate energy consumed in this interval
+            # Flight power
+            flight_power = self.power_consumption(self.my_drone.speed)
+            
+            # Communication power
+            comm_power = self.get_comm_power()
+            
+            total_power = flight_power + comm_power
+            energy_consumed = total_power * interval  # Joules = Watts * Seconds
+            
+            self.my_drone.residual_energy -= energy_consumed
+
+            if self.my_drone.residual_energy <= 0:
+                self.my_drone.residual_energy = 0
                 self.my_drone.sleep = True
-                # print('UAV: ', self.identifier, ' run out of energy at: ', self.env.now)
-
-    def test(self):
-        total_power = []
-
-        test_speed = [i for i in range(0, 71, 2)]  # speed ranges from 0m/s to 70m/s
-        for speed in test_speed:
-            temp_p, temp_blade, temp_induced, temp_para = self.power_consumption(speed)
-            total_power.append(temp_p)
-
-        plt.figure()
-        plt.plot(test_speed, total_power, color='black', linestyle='-', linewidth=2, label='total')
-        plt.legend()
-        plt.xlabel('UAV speed (m/s)')
-        plt.ylabel('Required power (W)')
-        plt.grid()
-        plt.show()
+                self.current_state = 'SLEEP'
+                # print('UAV: ', self.my_drone.identifier, ' run out of energy at: ', self.my_drone.simulator.env.now)
+            elif self.my_drone.residual_energy <= config.ENERGY_THRESHOLD:
+                # Optional: trigger low energy warning behavior
+                pass
 
 
 # if __name__ == "__main__":

@@ -115,8 +115,15 @@ class CsmaCa:
                         next_hop_id = pkd.next_hop_id
 
                         pkd.increase_ttl()
+                        
+                        # Energy: Set state to TX
+                        self.my_drone.energy_model.set_state('TX')
+                        
                         self.phy.unicast(pkd, next_hop_id)  # note: unicast function should be executed first!
                         yield self.env.timeout(pkd.packet_length / config.BIT_RATE * 1e6)  # transmission delay
+                        
+                        # Energy: Set state back to IDLE
+                        self.my_drone.energy_model.set_state('IDLE')
 
                         # only unicast data packets need to wait for ACK
                         logger.info('At time: %s (us) ---- UAV: %s starts to wait ACK for packet: %s',
@@ -135,8 +142,15 @@ class CsmaCa:
 
                     elif transmission_mode == 1:
                         pkd.increase_ttl()
+                        
+                        # Energy: Set state to TX
+                        self.my_drone.energy_model.set_state('TX')
+                        
                         self.phy.broadcast(pkd)
                         yield self.env.timeout(pkd.packet_length / config.BIT_RATE * 1e6)
+                        
+                        # Energy: Set state back to IDLE
+                        self.my_drone.energy_model.set_state('IDLE')
 
             except simpy.Interrupt:
                 already_wait = self.env.now - start_time

@@ -523,6 +523,7 @@ class PyQtGUI(QMainWindow):
             
             max_range = maximum_communication_range()
             link_positions = []
+            link_colors = []
             
             for i, drone_i in enumerate(drones_data):
                 for j, drone_j in enumerate(drones_data):
@@ -531,14 +532,27 @@ class PyQtGUI(QMainWindow):
                         if dist <= max_range:
                             link_positions.append(drone_i['pos'])
                             link_positions.append(drone_j['pos'])
+                            
+                            # Determine color based on distance (quality)
+                            ratio = dist / max_range
+                            if ratio < 0.5:
+                                color = (0, 1, 0, 0.6) # Green
+                            elif ratio < 0.8:
+                                color = (1, 1, 0, 0.6) # Yellow
+                            else:
+                                color = (1, 0, 0, 0.6) # Red
+                                
+                            link_colors.append(color)
+                            link_colors.append(color)
             
             if link_positions:
                 link_positions = np.array(link_positions)
-                # Dark blue links with transparency
-                self.link_lines.setData(pos=link_positions, color=(0, 0, 0.8, 0.3), width=2)
+                link_colors = np.array(link_colors)
+                # Update with per-vertex colors
+                self.link_lines.setData(pos=link_positions, color=link_colors, width=2)
             else:
                 # Clear links if none exist
-                self.link_lines.setData(pos=np.array([[0,0,0], [0,0,0]]), color=(0,0,0,0))
+                self.link_lines.setData(pos=np.array([[0,0,0], [0,0,0]]), color=np.array([[0,0,0,0], [0,0,0,0]]))
                 
             # Update Obstacles
             # Check if we need to create meshes for new obstacles

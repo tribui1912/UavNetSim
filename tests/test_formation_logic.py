@@ -17,7 +17,7 @@ def test_formation_convergence():
     config.NUMBER_OF_DRONES = 5
     config.SIM_TIME = 20 * 1e6 # 20 seconds
     
-    # Mock channel states
+    # Create channel states as simpy.Resource objects
     channel_states = {i: simpy.Resource(env, capacity=1) for i in range(config.NUMBER_OF_DRONES)}
     
     sim = Simulator(seed=2024, env=env, channel_states=channel_states, n_drones=config.NUMBER_OF_DRONES)
