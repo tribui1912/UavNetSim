@@ -6,6 +6,9 @@ echo    UavNetSim - Quick Start
 echo ========================================
 echo.
 
+REM Navigate to root directory (one level up from launcher folder)
+cd /d "%~dp0.."
+
 REM Check Python
 python --version >nul 2>&1
 if %ERRORLEVEL% neq 0 (
