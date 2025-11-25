@@ -4,6 +4,7 @@ from utils.ieee_802_11 import IeeeStandard
 IEEE_802_11 = IeeeStandard().b_802_11
 
 # --------------------- simulation parameters --------------------- #
+NUMBER_OF_SUB_CHANNELS = 3
 MAP_LENGTH = 600  # m, length of the map
 MAP_WIDTH = 600  # m, width of the map
 MAP_HEIGHT = 100  # m, height of the map
@@ -13,6 +14,7 @@ GRID_RESOLUTION = 20  # grid the map for path planning
 STATIC_CASE = 0  # whether to simulate a static network
 HETEROGENEOUS = 0  # heterogeneous network support (in terms of speed)
 LOGGING_LEVEL = logging.INFO  # whether to print the detail information during simulation
+DEFAULT_SPEED = 10  # m/s
 
 # ---------- hardware parameters of drone (rotary-wing) -----------#
 PROFILE_DRAG_COEFFICIENT = 0.012
@@ -42,6 +44,7 @@ SNR_THRESHOLD = IEEE_802_11['snr_threshold']
 VARIABLE_PAYLOAD_LENGTH = 0  # whether to consider random payload length of data packet
 AVERAGE_PAYLOAD_LENGTH = 1024 * 8  # in bit, 1024 bytes
 MAXIMUM_PAYLOAD_VARIATION = 1600  # in bit
+PACKET_GENERATION_RATE = 5 # packets per second (Poisson)
 MAX_TTL = NUMBER_OF_DRONES + 1  # maximum time-to-live value
 PACKET_LIFETIME = 10 * 1e6  # 10s
 IP_HEADER_LENGTH = 20 * 8  # header length in network layer, 20 byte
@@ -84,3 +87,17 @@ DIFS_DURATION = SIFS_DURATION + (2 * SLOT_DURATION)
 CW_MIN = 31  # initial contention window size
 ACK_TIMEOUT = ACK_PACKET_LENGTH / BIT_RATE * 1e6 + SIFS_DURATION + 50  # maximum waiting time for ACK, in us
 MAX_RETRANSMISSION_ATTEMPT = 5
+
+# --------------------- channel parameters ----------------------- #
+DATA_LOSS_PROBABILITY = 0.05  # preset probability of data loss
+
+# --------------------- energy parameters ------------------------ #
+# Power consumption in different states (Watt)
+POWER_TX = 1.5
+POWER_RX = 1.0
+POWER_IDLE = 0.1
+POWER_SLEEP = 0.001
+
+# --------------------- neighbor discovery ----------------------- #
+HELLO_INTERVAL = 1.0 * 1e6  # 1 second in us
+NEIGHBOR_TIMEOUT = 2.5 * 1e6  # 2.5 seconds in us

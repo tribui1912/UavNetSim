@@ -1,0 +1,28 @@
+# Git attributes for UavNetSim
+
+# Shell scripts should always use LF (Unix line endings)
+*.sh text eol=lf
+
+# Batch files should always use CRLF (Windows line endings)
+*.bat text eol=crlf
+
+# Python files: let Git auto-detect but normalize to LF
+*.py text eol=lf
+
+# Markdown and text files: normalize to LF
+*.md text eol=lf
+*.txt text eol=lf
+
+# CSV files: keep as-is
+*.csv binary
+
+# Images and binary files: treat as binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+
+# Log files: treat as binary (don't modify)
+*.log binary
+

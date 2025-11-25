@@ -6,6 +6,7 @@ from entities.drone import Drone
 from entities.obstacle import SphericalObstacle, CubeObstacle
 from simulator.metrics import Metrics
 from mobility import start_coords
+from mobility.leader_follower import LeaderFollower
 from path_planning.astar import astar
 from utils import config
 from utils.util_function import grid_map
@@ -61,7 +62,7 @@ class Simulator:
             if config.HETEROGENEOUS:
                 speed = random.randint(5, 60)
             else:
-                speed = 10
+                speed = config.DEFAULT_SPEED
 
             print('UAV: ', i, ' initial location is at: ', start_position[i], ' speed is: ', speed)
             drone = Drone(env=env,
@@ -78,6 +79,14 @@ class Simulator:
 
         self.env.process(self.show_performance())
         self.env.process(self.show_time())
+        self.env.process(self.formation_manager())
+
+    def formation_manager(self):
+        """
+        Wait for specific time to trigger formation change.
+        """
+        yield self.env.timeout(300 * 1e6) # 300 seconds
+        self.trigger_formation_change()
 
     def show_time(self):
         while True:
@@ -95,26 +104,45 @@ class Simulator:
 
     def trigger_formation_change(self):
         """
-        Trigger drones to move into a circle formation.
+        Trigger drones to switch to Leader-Follower formation.
         """
         print(f"Simulator: Formation change event triggered at {self.env.now}")
         
-        # Circle formation parameters
-        center_x = config.MAP_LENGTH / 2
-        center_y = config.MAP_WIDTH / 2
-        center_z = config.MAP_HEIGHT / 2
-        radius = 150
+        if not self.drones:
+            return
+
+        leader = self.drones[0]
+        # Leader keeps its current mobility (RandomWaypoint)
         
-        angle_step = 2 * np.pi / len(self.drones)
+        # Followers switch to LeaderFollower
+        # V-Formation offsets
+        offsets = [
+            [0, 0, 0],      # Leader
+            [-50, -50, 0],  # Follower 1
+            [-50, 50, 0],   # Follower 2
+            [-100, -100, 0],# Follower 3
+            [-100, 100, 0], # Follower 4
+            [-150, -150, 0],# Follower 5
+            [-150, 150, 0], # Follower 6
+            [-200, -200, 0],# Follower 7
+            [-200, 200, 0], # Follower 8
+            [-250, -250, 0] # Follower 9
+        ]
         
         for i, drone in enumerate(self.drones):
-            angle = i * angle_step
-            target_x = center_x + radius * np.cos(angle)
-            target_y = center_y + radius * np.sin(angle)
-            target_z = center_z
+            if i == 0:
+                continue # Leader
             
-            drone.target_position = [target_x, target_y, target_z]
-            print(f"Drone {drone.identifier} target set to {drone.target_position}")
+            # Stop old mobility model
+            if hasattr(drone.mobility_model, 'stop'):
+                drone.mobility_model.stop()
+            
+            # Calculate offset (cycle if more drones than offsets)
+            offset = offsets[i % len(offsets)]
+            
+            # Switch to LeaderFollower
+            drone.mobility_model = LeaderFollower(drone, leader, offset)
+            print(f"Drone {drone.identifier} switched to LeaderFollower following Drone 0 with offset {offset}")
 
     def add_obstacle(self):
         """

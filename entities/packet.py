@@ -112,3 +112,62 @@ class AckPacket(Packet):
         self.dst_drone = dst_drone
 
         self.ack_packet = ack_packet
+
+
+class HelloPacket(Packet):
+    """
+    Hello packet for neighbor discovery
+    """
+    def __init__(self,
+                 src_drone,
+                 creation_time,
+                 packet_id,
+                 packet_length,
+                 simulator,
+                 channel_id):
+        super().__init__(packet_id, packet_length, creation_time, simulator, channel_id)
+        self.src_drone = src_drone
+        self.transmission_mode = 1  # Broadcast
+
+
+class RreqPacket(Packet):
+    """
+    Route Request Packet for AODV
+    """
+    def __init__(self, src_drone, creation_time, packet_id, packet_length, simulator, channel_id,
+                 broadcast_id, dest_id, dest_seq, src_seq, hop_count=0):
+        super().__init__(packet_id, packet_length, creation_time, simulator, channel_id)
+        self.src_drone = src_drone
+        self.broadcast_id = broadcast_id
+        self.dest_id = dest_id
+        self.dest_seq = dest_seq
+        self.src_seq = src_seq
+        self.hop_count = hop_count
+        self.transmission_mode = 1  # Broadcast
+
+class RrepPacket(Packet):
+    """
+    Route Reply Packet for AODV
+    """
+    def __init__(self, src_drone, creation_time, packet_id, packet_length, simulator, channel_id,
+                 originator_id, dest_id, dest_seq, hop_count, lifetime):
+        super().__init__(packet_id, packet_length, creation_time, simulator, channel_id)
+        self.src_drone = src_drone
+        self.originator_id = originator_id
+        self.dest_id = dest_id
+        self.dest_seq = dest_seq
+        self.hop_count = hop_count
+        self.lifetime = lifetime
+        self.next_hop_id = None  # Set by routing protocol
+        self.transmission_mode = 0  # Unicast
+
+class RerrPacket(Packet):
+    """
+    Route Error Packet for AODV
+    """
+    def __init__(self, src_drone, creation_time, packet_id, packet_length, simulator, channel_id,
+                 unreachable_dests):
+        super().__init__(packet_id, packet_length, creation_time, simulator, channel_id)
+        self.src_drone = src_drone
+        self.unreachable_dests = unreachable_dests  # List of (dest_id, dest_seq)
+        self.transmission_mode = 1  # Broadcast (usually)

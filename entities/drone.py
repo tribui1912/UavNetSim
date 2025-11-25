@@ -4,10 +4,11 @@ import random
 import math
 import queue
 from simulator.log import logger
-from entities.packet import DataPacket
-from routing.dsdv.dsdv import Dsdv
+from entities.packet import DataPacket, HelloPacket
+from routing.aodv.aodv import Aodv
 from mac.csma_ca import CsmaCa
 from mobility.gauss_markov_3d import GaussMarkov3D
+from mobility.random_waypoint_3d import RandomWaypoint3D
 from energy.energy_model import EnergyModel
 from allocation.channel_assignment import ChannelAssigner
 from utils import config
@@ -18,7 +19,7 @@ from phy.large_scale_fading import sinr_calculator
 class Drone:
     """
     Drone implementation
-
+    
     Drones in the simulation are served as routers. Each drone can be selected as a potential source node, destination
     and relaying node. Each drone needs to install the corresponding routing module, MAC module, mobility module and
     energy module, etc. At the same time, each drone also has its own queue and can only send one packet at a time, so
@@ -105,9 +106,9 @@ class Drone:
         self.mac_process_count = 0
         self.enable_blocking = 1  # enable "stop-and-wait" protocol
 
-        self.routing_protocol = Dsdv(self.simulator, self)
+        self.routing_protocol = Aodv(self.simulator, self)
 
-        self.mobility_model = GaussMarkov3D(self)
+        self.mobility_model = RandomWaypoint3D(self)
         # self.motion_controller = VfMotionController(self)
 
         self.energy_model = EnergyModel(self)
@@ -116,9 +117,13 @@ class Drone:
 
         self.channel_assigner = ChannelAssigner(self.simulator, self)
 
+        self.neighbor_table = {}  # neighbor_id -> expiry_time
+
         self.env.process(self.generate_data_packet())
         self.env.process(self.feed_packet())
         self.env.process(self.receive())
+        self.env.process(self.send_hello_packet())
+        self.env.process(self.check_neighbor_expiry())
 
     def generate_data_packet(self, traffic_pattern='Poisson'):
         """
@@ -141,7 +146,7 @@ class Drone:
                     interval of data packets follows exponential distribution
                     """
 
-                    rate = 5  # on average, how many packets are generated in 1s
+                    rate = config.PACKET_GENERATION_RATE  # on average, how many packets are generated in 1s
                     yield self.env.timeout(round(self.rng_drone.expovariate(rate) * 1e6))
 
                 config.GL_ID_DATA_PACKET += 1  # data packet id
@@ -376,7 +381,16 @@ class Drone:
                             logger.info('At time: %s (us) ---- Packet %s from UAV: %s is received by UAV: %s, sinr is: %s',
                                         self.env.now, pkd.packet_id, sender, self.identifier, max_sinr)
 
-                            yield self.env.process(self.routing_protocol.packet_reception(pkd, sender))
+                            # Energy: Set state to RX while processing received packet
+                            self.energy_model.set_state('RX')
+                            
+                            if isinstance(pkd, HelloPacket):
+                                self.update_neighbor_table(sender)
+                            else:
+                                yield self.env.process(self.routing_protocol.packet_reception(pkd, sender))
+                            
+                            # Energy: Set state back to IDLE
+                            self.energy_model.set_state('IDLE')
                         else:
                             logger.info('At time: %s (us) ---- Packet %s is dropped due to exceeding max TTL',
                                         self.env.now, pkd.packet_id)
@@ -449,3 +463,52 @@ class Drone:
                 pass
 
         return flag, all_drones_send_to_me, time_span, potential_packet
+
+    def send_hello_packet(self):
+        """
+        Periodically send Hello packets to announce presence
+        """
+        while True:
+            if not self.sleep:
+                yield self.env.timeout(random.randint(0, 1000)) # Random jitter
+                
+                config.GL_ID_HELLO_PACKET += 1
+                channel_id = self.channel_assigner.channel_assign()
+                
+                hello_pkt = HelloPacket(self,
+                                      creation_time=self.env.now,
+                                      packet_id=config.GL_ID_HELLO_PACKET,
+                                      packet_length=config.HELLO_PACKET_LENGTH,
+                                      simulator=self.simulator,
+                                      channel_id=channel_id)
+                
+                if self.transmitting_queue.qsize() < self.max_queue_size:
+                    self.transmitting_queue.put(hello_pkt)
+                
+                yield self.env.timeout(config.HELLO_INTERVAL)
+            else:
+                break
+
+    def check_neighbor_expiry(self):
+        """
+        Periodically check for expired neighbors
+        """
+        while True:
+            yield self.env.timeout(config.HELLO_INTERVAL)
+            current_time = self.env.now
+            expired_neighbors = []
+            
+            for neighbor_id, expiry_time in self.neighbor_table.items():
+                if current_time > expiry_time:
+                    expired_neighbors.append(neighbor_id)
+            
+            for neighbor_id in expired_neighbors:
+                del self.neighbor_table[neighbor_id]
+                # Notify routing protocol if needed
+                # self.routing_protocol.notify_link_break(neighbor_id)
+
+    def update_neighbor_table(self, neighbor_id):
+        """
+        Update neighbor table upon receiving a Hello packet
+        """
+        self.neighbor_table[neighbor_id] = self.env.now + config.NEIGHBOR_TIMEOUT

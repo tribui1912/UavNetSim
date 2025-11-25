@@ -1,5 +1,11 @@
 import simpy
+import sys
+import os
 import matplotlib.pyplot as plt
+
+# Add project root to path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from utils import config
 from simulator.simulator import Simulator
 from visualization.live_visualizer import LiveVisualizer
