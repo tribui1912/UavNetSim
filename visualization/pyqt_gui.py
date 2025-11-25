@@ -214,24 +214,47 @@ class PyQtGUI(QMainWindow):
         """Setup 3D OpenGL view for topology"""
         logger.info("Setting up 3D view")
         
-        # Create custom GLViewWidget with LIGHT GREY background
-        class LightGreyGLViewWidget(gl.GLViewWidget):
+        # Create custom GLViewWidget with WHITE background (like matplotlib)
+        class WhiteGLViewWidget(gl.GLViewWidget):
             def paintGL(self, *args, **kwargs):
-                # Set clear color to LIGHT GREY (0.8 = 80% brightness)
-                glClearColor(0.8, 0.8, 0.8, 1.0)  # Light grey background
+                # Set clear color to WHITE (1.0 = 100% brightness, like matplotlib)
+                glClearColor(1.0, 1.0, 1.0, 1.0)  # White background
                 super().paintGL(*args, **kwargs)
         
-        self.gl_widget = LightGreyGLViewWidget()
+        self.gl_widget = WhiteGLViewWidget()
         # Also try the backup method with a different color format
-        self.gl_widget.setBackgroundColor(200, 200, 200)  # RGB 200/255 = light grey
+        self.gl_widget.setBackgroundColor(255, 255, 255)  # RGB 255/255 = white (matplotlib style)
         self.gl_widget.setCameraPosition(distance=900, elevation=25, azimuth=45)
         
-        # Add grid with DARK/BLACK styling for light background  
-        grid = gl.GLGridItem()
-        grid.setSize(config.MAP_LENGTH, config.MAP_WIDTH)
-        grid.setSpacing(100, 100)
-        grid.setColor((0.0, 0.0, 0.0, 1.0))  # PURE BLACK grid for maximum visibility
-        self.gl_widget.addItem(grid)
+        # Create bottom grid plane using GLLinePlotItem (matplotlib style)
+        grid_color = (0.7, 0.7, 0.7, 0.8)  # Light gray with slight transparency
+        grid_width = 1
+        
+        # Calculate spacing for uniform grid density
+        num_divisions = 6  # number of grid squares in each direction
+        spacing_x = config.MAP_LENGTH / num_divisions
+        spacing_y = config.MAP_WIDTH / num_divisions
+        
+        # XY Plane at Z = 0 (Bottom) - Ground plane only
+        for i in range(num_divisions + 1):
+            y = i * spacing_y
+            x_line = gl.GLLinePlotItem(
+                pos=np.array([[0, y, 0], [config.MAP_LENGTH, y, 0]]),
+                color=grid_color,
+                width=grid_width,
+                antialias=True
+            )
+            self.gl_widget.addItem(x_line)
+        
+        for i in range(num_divisions + 1):
+            x = i * spacing_x
+            y_line = gl.GLLinePlotItem(
+                pos=np.array([[x, 0, 0], [x, config.MAP_WIDTH, 0]]),
+                color=grid_color,
+                width=grid_width,
+                antialias=True
+            )
+            self.gl_widget.addItem(y_line)
         
         # Add custom thick axes (Red=X, Green=Y, Blue=Z)
         axis_length = 200

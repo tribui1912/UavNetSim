@@ -4,6 +4,9 @@ REM This script provides a menu-driven interface to run tests, simulations, and 
 
 setlocal enabledelayedexpansion
 
+REM Navigate to root directory (one level up from launcher folder)
+cd /d "%~dp0.."
+
 :HEADER
 cls
 echo ========================================
