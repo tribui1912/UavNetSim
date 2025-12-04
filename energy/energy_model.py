@@ -103,6 +103,7 @@ class EnergyModel:
             if self.my_drone.residual_energy <= 0:
                 self.my_drone.residual_energy = 0
                 self.my_drone.sleep = True
+                self.my_drone.death_time = self.my_drone.simulator.env.now  # Record time of death
                 self.current_state = 'SLEEP'
                 # print('UAV: ', self.my_drone.identifier, ' run out of energy at: ', self.my_drone.simulator.env.now)
             elif self.my_drone.residual_energy <= config.ENERGY_THRESHOLD:

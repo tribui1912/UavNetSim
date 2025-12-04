@@ -1,0 +1,364 @@
+\documentclass[10pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+
+% Page Geometry
+\geometry{margin=1in}
+
+% Colors for code listings
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Code listing style
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={UavNetSim User Manual},
+    pdfpagemode=FullScreen,
+}
+
+% Heading formatting
+\titleformat{\section}
+  {\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+% Title Page Information
+\title{COMPE 560 - Machine Learning\\
+Fall 2025\\
+User Manual\\
+Drone Network Simulator}
+\author{Tri Bui\\
+RedID: 828135536}
+\date{\today}
+
+\begin{document}
+
+% First page (Cover)
+\begin{center}
+    \vspace*{\fill}
+    {\includegraphics[width=5cm]{SDSU_logo.png}}
+    \vspace{1cm}
+
+    \Large\textbf{College of Engineering}\\
+    \Large\textbf{Department of Electrical and Computer Engineering}\\
+    \vspace{1.5cm}
+
+    \LARGE\textbf{COMPE 560}\\
+    \Large\textbf{Fall 2025}\\
+    \vspace{1.5cm}
+    
+    \Huge\textbf{Drone Network Simulator}\\
+    \vspace{0.5cm}
+    \LARGE\textbf{User Manual}\\
+    \vspace{2cm}
+
+    \Large\textbf{Group 1}\\
+    \vspace{0.5cm}
+    \large\textbf{Instructor:} Dr. Umut Can Çabuk
+    \vspace*{\fill}
+\end{center}
+\thispagestyle{empty}
+\newpage
+
+% Table of Contents page
+\tableofcontents
+\thispagestyle{empty}
+\newpage
+
+\setcounter{page}{1}
+
+% Content
+\section{Introduction}
+\textbf{Drone Network Simulator} is a high-fidelity, discrete-event simulator designed for Unmanned Aerial Vehicle (UAV) networks, also known as Flying Ad-hoc Networks (FANETs). It provides a comprehensive environment to model, simulate, and analyze the complex interactions between physical mobility, wireless communication protocols, and energy consumption in 3D space.
+
+\vspace{1em}
+\noindent Key capabilities include:
+\begin{itemize}
+    \item \textbf{Realistic Mobility:} 3D Random Waypoint and Leader-Follower formation flight.
+    \item \textbf{Protocol Stack:} Modular implementation of PHY, CSMA/CA MAC, and AODV routing.
+    \item \textbf{Energy Modeling:} Detailed power consumption tracking for flight and communication.
+    \item \textbf{Interactive GUI:} Real-time 3D visualization with manual controls and live metrics.
+\end{itemize}
+
+\section{Installation \& Setup}
+
+\subsection{Option A: The Easy Way (Recommended)}
+The Drone Network Simulator comes with a ``zero-setup'' launcher that handles dependencies and virtual environments automatically.
+
+\vspace{0.5em}
+\noindent \textbf{Windows Users:}
+\begin{enumerate}
+    \item Navigate to the \texttt{launcher} folder.
+    \item Double-click \texttt{run\_uavnetsim.bat}.
+\end{enumerate}
+
+\noindent \textbf{Mac/Linux Users:}
+\begin{enumerate}
+    \item Open a terminal.
+    \item Run: \texttt{./launcher/run\_uavnetsim.sh}\\
+    \textit{(Note: You may need to run \texttt{chmod +x launcher/*.sh} first)}
+\end{enumerate}
+
+\noindent The launcher provides an interactive menu to:
+\begin{itemize}
+    \item [1] Run the Simulation (GUI)
+    \item [2] Run Unit Tests
+    \item [4] Run All Experiments (E1-E3)
+    \item [6] Check System Status
+\end{itemize}
+
+\subsection{Option B: Manual Installation}
+If you prefer to manage the environment yourself:
+
+\subsubsection{Prerequisites}
+\begin{itemize}
+    \item Python 3.8 or higher
+    \item pip package manager
+\end{itemize}
+
+\subsubsection{Installation}
+\begin{enumerate}
+    \item \textbf{Clone the repository:}
+    \begin{lstlisting}[language=bash]
+git clone https://github.com/tribui1912/UavNetSim.git
+cd UavNetSim
+    \end{lstlisting}
+
+    \item \textbf{Install dependencies:}
+    \begin{lstlisting}[language=bash]
+pip install -r requirements.txt
+    \end{lstlisting}
+    \textit{Key dependencies: \texttt{simpy}, \texttt{pyqt6}, \texttt{pyqtgraph}, \texttt{pyopengl}, \texttt{numpy}, \texttt{pandas}.}
+\end{enumerate}
+
+\subsubsection{Running the Simulator (Manual Mode)}
+To launch the main GUI application:
+\begin{lstlisting}[language=bash]
+python main.py
+\end{lstlisting}
+
+\noindent To run the automated experiments (headless mode):
+\begin{lstlisting}[language=bash]
+python experiment_runner.py
+\end{lstlisting}
+
+\section{User Interface Guide}
+The Drone Network Simulator GUI provides a powerful interface for visualizing network behavior and controlling simulation parameters in real-time.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{img/screenshot.png}
+    \caption{The Drone Network Simulator Main Interface}
+    \label{fig:gui_screenshot}
+\end{figure}
+
+\subsection{Main Visualization Area (3D View)}
+The central panel displays the 3D simulation environment.
+\begin{itemize}
+    \item \textbf{UAV Nodes:} Represented as spheres.
+    \begin{itemize}
+        \item \textbf{Color Coding:} Indicates energy level.
+        \begin{itemize}
+            \item \textcolor{green}{\textbf{Green:}} $> 50\%$ Energy
+            \item \textcolor{yellow}{\textbf{Yellow:}} $20\% - 50\%$ Energy
+            \item \textcolor{red}{\textbf{Red:}} $< 20\%$ Energy
+        \end{itemize}
+    \end{itemize}
+    \item \textbf{Links:} Lines drawn between nodes indicate active communication links (neighbors within range).
+    \item \textbf{Navigation:}
+    \begin{itemize}
+        \item \textbf{Rotate:} Left-click and drag.
+        \item \textbf{Pan:} Middle-click (or Shift + Left-click) and drag.
+        \item \textbf{Zoom:} Scroll wheel.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Control Panel (Left/Bottom)}
+Controls the execution flow of the simulation.
+\begin{itemize}
+    \item \textbf{Start:} Begins the simulation.
+    \item \textbf{Pause:} Temporarily halts the simulation.
+    \item \textbf{Reset:} Stops and resets the environment to initial conditions.
+    \item \textbf{Speed Slider:} Adjusts the simulation speed multiplier (1x to 10x).
+    \item \textbf{Trigger Formation Change:} Manually forces the UAV swarm to switch from Random Waypoint to Leader-Follower formation.
+\end{itemize}
+
+\subsection{Statistics Panel (Right)}
+Displays real-time Key Performance Indicators (KPIs).
+\begin{itemize}
+    \item \textbf{Live Metrics:}
+    \begin{itemize}
+        \item \textbf{PDR (Packet Delivery Ratio):} Percentage of packets successfully delivered.
+        \item \textbf{Latency:} Average end-to-end delay (ms).
+        \item \textbf{Throughput:} Current network throughput (Kbps).
+    \end{itemize}
+    \item \textbf{Charts:}
+    \begin{itemize}
+        \item \textbf{PDR vs Time:} Tracks reliability over the simulation run.
+        \item \textbf{Energy Profile:} Shows average residual energy of the swarm.
+        \item \textbf{Queue Size:} Monitors buffer occupancy to detect congestion.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Exporting Data}
+\begin{itemize}
+    \item \textbf{Export Screenshot:} Saves the current 3D view as a PNG file.
+    \item \textbf{Export CSV:} Saves the collected metrics (PDR, Latency, Energy) to a CSV file for external analysis.
+\end{itemize}
+
+\section{Simulation Features}
+
+\subsection{Physical Layer}
+The PHY layer models the wireless medium and hardware characteristics.
+\begin{itemize}
+    \item \textbf{Channel Model:} Implements a Log-Distance Path Loss model with probabilistic shadowing. Data loss is simulated with a configurable probability (default 5\%) to mimic fading and interference.
+    \item \textbf{Energy Model:} Tracks power consumption in four states:
+    \begin{itemize}
+        \item \textbf{TX (Transmission):} 1.5 W (configurable)
+        \item \textbf{RX (Reception):} 1.0 W
+        \item \textbf{Idle:} 0.1 W
+        \item \textbf{Sleep:} 0.001 W
+        \item \textbf{Initial Energy:} 200 kJ per drone (enables $\sim$180s flight at 10 m/s)
+    \end{itemize}
+    \item \textbf{Flight Power:} $\sim$1100 W at 10 m/s, calculated using aerodynamic principles (Zeng et al. model). Flight power dominates total energy consumption.
+\end{itemize}
+
+\subsection{MAC Layer}
+The Link Layer manages access to the shared medium.
+\begin{itemize}
+    \item \textbf{Protocol:} CSMA/CA (Carrier Sense Multiple Access with Collision Avoidance).
+    \item \textbf{Features:}
+    \begin{itemize}
+        \item \textbf{Backoff Mechanism:} Exponential backoff with configurable contention window ($CW_{min}=31$).
+        \item \textbf{Reliability:} Stop-and-Wait ARQ with ACKs.
+        \item \textbf{Retransmissions:} Packets are dropped after \texttt{MAX\_RETRANSMISSION\_ATTEMPT} (5) failures.
+        \item \textbf{Queuing:} Per-node FIFO queues with finite capacity.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Network Layer}
+Handles routing and end-to-end packet delivery.
+\begin{itemize}
+    \item \textbf{Protocol:} AODV (Ad hoc On-Demand Distance Vector).
+    \item \textbf{Mechanism:} Reactive routing. Routes are discovered only when needed via RREQ (Route Request) and RREP (Route Reply) cycles.
+    \item \textbf{Maintenance:}
+    \begin{itemize}
+        \item \textbf{Hello Packets:} Periodic beacons (1 Hz) to maintain neighbor tables.
+        \item \textbf{Link Breaks:} Detected via MAC layer feedback (ACK timeout), triggering RERR (Route Error) packets and local repair.
+        \item \textbf{Buffering:} Packets are buffered at the source while waiting for route discovery.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Mobility Models}
+Defines how UAVs move in the 3D space.
+\begin{itemize}
+    \item \textbf{3D Random Waypoint:} Nodes select random destinations within the $600 \times 600 \times 100$ m volume, move at constant speed, pause, and repeat.
+    \item \textbf{Leader-Follower Formation:} A designated leader follows a path (e.g., RWP), while follower nodes maintain fixed relative offsets (e.g., V-formation).
+    \item \textbf{Dynamic Switching:} The simulator supports switching mobility models mid-run (e.g., at $t=300s$) to test protocol adaptability.
+\end{itemize}
+
+\section{Running Experiments}
+The \texttt{experiment\_runner.py} script automates the execution of predefined scenarios.
+
+\subsection{E1: Mobility Model Comparison}
+\begin{itemize}
+    \item \textbf{Goal:} Compare Leader-Follower formation vs Random Waypoint at different network scales.
+    \item \textbf{Setup:} N = 5, 25, 100 drones with tiered durations (50s for N=5,25; 30s for N=100).
+    \item \textbf{Finding:} Formation provides 30\% latency reduction in small networks but both models degrade at scale due to congestion.
+\end{itemize}
+
+\subsection{E2: TX Power vs Lifetime/PDR}
+\begin{itemize}
+    \item \textbf{Goal:} Analyze the impact of transmission power on network performance.
+    \item \textbf{Setup:} 25 drones, TX power varying from 0.5-2.5 W, 600s max duration.
+    \item \textbf{Finding:} Lifetime is flight-dominated ($\sim$181s regardless of TX power). Higher TX power improves PDR (11.5\% at 0.5W $\to$ 25.3\% at 2.5W) by extending range.
+\end{itemize}
+
+\subsection{E3: Formation Transition}
+\begin{itemize}
+    \item \textbf{Goal:} Assess network stability and recovery during topology changes.
+    \item \textbf{Setup:} 25 drones, 200s simulation. Switch from Random Waypoint to Formation flight at $t=100s$.
+    \item \textbf{Finding:} Network recovered in 1 second with improved stability (PDR increased from 20\% to 24\% post-transition).
+\end{itemize}
+
+\section{Statement of Work}
+This project was collaboratively developed by a team of 10 members. The responsibilities were divided to ensure coverage of all system components, from low-level physical modeling to high-level application GUI and analysis.
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.5}
+    \begin{tabular}{|p{0.25\linewidth}|p{0.25\linewidth}|p{0.4\linewidth}|}
+        \hline
+        \textbf{Member Name} & \textbf{Role} & \textbf{Primary Contributions} \\
+        \hline
+        [Name 1] & Project Lead \& Architect & System architecture design, core event engine (SimPy) integration, overall project management. \\
+        \hline
+        [Name 2] & PHY Layer Lead & Implementation of Channel models (Path Loss, Fading) and SINR calculations. \\
+        \hline
+        [Name 3] & Energy Model Specialist & Development of the Energy Consumption Model (Flight + Comm power) and battery state logic. \\
+        \hline
+        [Name 4] & MAC Layer Developer & Implementation of CSMA/CA protocol, Backoff logic, and ACK/Retransmission mechanisms. \\
+        \hline
+        [Name 5] & Network Layer Lead & Implementation of AODV Routing Protocol (RREQ, RREP, RERR handling) and routing tables. \\
+        \hline
+        [Name 6] & Mobility Model Developer & Implementation of 3D Random Waypoint and Leader-Follower formation logic. \\
+        \hline
+        [Name 7] & GUI \& Visualization & Development of the PyQt6/OpenGL 3D visualization, rendering pipeline, and interactive controls. \\
+        \hline
+        [Name 8] & Data Analysis \& Metrics & Implementation of the statistics collection system, real-time plotting, and CSV/PNG export features. \\
+        \hline
+        [Name 9] & Experiment Runner & Creation of \texttt{experiment\_runner.py}, automation of E1/E2/E3 scenarios, and result aggregation. \\
+        \hline
+        [Name 10] & QA \& Documentation & Comprehensive testing, bug tracking, and compilation of the User Manual and Design Document. \\
+        \hline
+    \end{tabular}
+    \caption{Statement of Work and Contribution Breakdown}
+    \label{tab:sow}
+\end{table}
+
+\section{References}
+\begin{enumerate}[label={[\arabic*]}]
+    \item Z. Zhou et al., ``UavNetSim-v1: A Python-based Simulation Platform for UAV Communication Networks,'' \textit{arXiv preprint arXiv:2507.09852}, 2025.
+    \item C. Perkins, E. Belding-Royer, and S. Das, ``Ad hoc On-Demand Distance Vector (AODV) Routing,'' RFC 3561, 2003.
+    \item Y. Zeng, J. Xu, and R. Zhang, ``Energy Minimization for Wireless Communication with Rotary-Wing UAV,'' \textit{IEEE Transactions on Wireless Communications}, vol. 18, no. 4, pp. 2329-2345, 2019.
+    \item IEEE Standard for Information technology—Telecommunications and information exchange between systems Local and metropolitan area networks—Specific requirements - Part 11: Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications, \textit{IEEE Std 802.11-2016}.
+\end{enumerate}
+
+\end{document}
