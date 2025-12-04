@@ -114,6 +114,7 @@ class Drone:
         self.energy_model = EnergyModel(self)
         self.residual_energy = config.INITIAL_ENERGY
         self.sleep = False
+        self.death_time = None  # Track when drone runs out of energy
 
         self.channel_assigner = ChannelAssigner(self.simulator, self)
 

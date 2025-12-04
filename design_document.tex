@@ -1,0 +1,365 @@
+\documentclass[10pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{titlesec}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{amsmath}
+
+% Page Geometry
+\geometry{margin=1in}
+
+% Colors for code listings
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+% Code listing style
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    pdftitle={UavNetSim Design Document},
+    pdfpagemode=FullScreen,
+}
+
+% Heading formatting
+\titleformat{\section}
+  {\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+  {\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+
+% Title Page Information
+\title{COMPE 560 - Machine Learning\\
+Fall 2025\\
+Design Document\\
+Drone Network Simulator}
+\author{Tri Bui\\
+RedID: 828135536}
+\date{\today}
+
+\begin{document}
+
+% First page (Cover)
+\begin{center}
+    \vspace*{\fill}
+    {\includegraphics[width=5cm]{SDSU_logo.png}}
+    \vspace{1cm}
+
+    \Large\textbf{College of Engineering}\\
+    \Large\textbf{Department of Electrical and Computer Engineering}\\
+    \vspace{1.5cm}
+
+    \LARGE\textbf{COMPE 560}\\
+    \Large\textbf{Fall 2025}\\
+    \vspace{1.5cm}
+    
+    \Huge\textbf{Drone Network Simulator}\\
+    \vspace{0.5cm}
+    \LARGE\textbf{Design Document}\\
+    \vspace{2cm}
+
+    \Large\textbf{Group 1}\\
+    \vspace{0.5cm}
+    \large\textbf{Instructor:} Dr. Umut Can Çabuk
+    \vspace*{\fill}
+\end{center}
+\thispagestyle{empty}
+\newpage
+
+% Table of Contents page
+\tableofcontents
+\thispagestyle{empty}
+\newpage
+
+\setcounter{page}{1}
+
+\section{Introduction}
+Unmanned Aerial Vehicle (UAV) networks, often referred to as Flying Ad-hoc Networks (FANETs), are characterized by high mobility, dynamic topology, and energy constraints. Simulating such networks requires a tool that can accurately model the interplay between physical movement, wireless signal propagation, and network protocol behavior. \textit{UavNetSim} addresses this need by providing a modular, extensible, and high-fidelity simulation environment.
+
+\section{System Architecture}
+
+The simulator is architected as a discrete-event system where state changes occur at discrete points in time. This approach is efficient for network simulations where events (packet arrivals, timer expirations) are sparse compared to continuous time.
+
+\subsection{Core Components}
+\begin{enumerate}
+    \item \textbf{Event Engine (SimPy)}: The backbone of the simulator. It manages a priority queue of events, ensuring that processes (e.g., packet transmissions, mobility updates) are executed in the correct temporal order.
+    \item \textbf{Entity Management}: A centralized registry maintains the state of all network nodes (drones) and environmental obstacles.
+    \item \textbf{Layered Protocol Stack}: Each drone implements a modular stack (PHY, MAC, NET), allowing for easy substitution of protocols (e.g., replacing AODV with OLSR).
+    \item \textbf{Visualization Interface}: A decoupled GUI thread that polls the simulation state for real-time rendering without blocking the simulation kernel.
+    \item \textbf{Launcher System}: A unified entry point (\texttt{launcher/} scripts) that automates environment setup, dependency management, and execution modes (GUI, Headless Experiments, Tests).
+\end{enumerate}
+
+\section{Physical Layer Design}
+
+The Physical (PHY) layer is the foundation of wireless communication, modeling the analog reality of signal transmission.
+
+\subsection{Channel Model}
+The wireless channel is modeled as a stochastic medium subject to path loss and fading.
+
+\subsubsection{Path Loss Model}
+We employ a log-distance path loss model to estimate the received signal power. The path loss $PL(d)$ in decibels is given by:
+\begin{equation}
+    PL(d) = PL(d_0) + 10 \alpha \log_{10}\left(\frac{d}{d_0}\right) + X_\sigma
+\end{equation}
+where:
+\begin{itemize}
+    \item $d$ is the Euclidean distance between transmitter and receiver.
+    \item $d_0$ is the reference distance.
+    \item $\alpha$ is the path loss exponent ($\alpha \approx 2$ for free space, $\alpha > 2$ for urban environments).
+    \item $X_\sigma$ is a zero-mean Gaussian random variable representing shadowing.
+\end{itemize}
+
+In the implementation, we simplify this to a deterministic free-space model with a probabilistic packet drop mechanism to account for fading and interference:
+
+\begin{lstlisting}[language=Python, caption=Path Loss Calculation]
+def general_path_loss(receiver, transmitter):
+    c = config.LIGHT_SPEED
+    fc = config.CARRIER_FREQUENCY
+    alpha = 2  # Free space path loss exponent
+    distance = euclidean_distance_3d(receiver.coords, transmitter.coords)
+    
+    if distance == 0: return 0
+    
+    # Friis Transmission Equation form
+    path_loss = (c / (4 * math.pi * fc * distance)) ** alpha
+    return path_loss
+\end{lstlisting}
+
+\subsection{Energy Consumption Model}
+Accurate energy modeling is crucial for UAV networks. The total power consumption $P_{total}$ is the sum of communication power $P_{comm}$ and flight power $P_{flight}$.
+
+\subsubsection{Communication Power}
+The radio interface operates in four distinct states, defined in `config.py`:
+\begin{itemize}
+    \item \textbf{Transmission ($P_{TX}$)}: 1.5 W. High power consumption due to the power amplifier.
+    \item \textbf{Reception ($P_{RX}$)}: 1.0 W. Power consumed by LNA, mixer, and demodulator.
+    \item \textbf{Idle ($P_{IDLE}$)}: 0.1 W. Baseline power for listening to the channel.
+    \item \textbf{Sleep ($P_{SLEEP}$)}: 0.001 W. Minimal power state when the battery is depleted.
+\end{itemize}
+
+\subsubsection{Flight Power}
+We adopt the analytical model proposed by Zeng et al., which expresses power as a function of velocity $v$. The implementation uses specific aerodynamic parameters:
+\begin{itemize}
+    \item \texttt{ROTOR\_SOLIDITY}: 0.05
+    \item \texttt{ROTOR\_DISC\_AREA}: 0.79 $m^2$
+    \item \texttt{BLADE\_ANGULAR\_VELOCITY}: 400 rad/s
+    \item \texttt{AIRCRAFT\_WEIGHT}: 100 N
+\end{itemize}
+
+\begin{equation}
+    P_{flight}(v) = P_0 \left(1 + \frac{3v^2}{U_{tip}^2}\right) + P_i \left(\sqrt{1 + \frac{v^4}{4v_0^4}} - \frac{v^2}{2v_0^2}\right)^{1/2} + \frac{1}{2} d_0 \rho s A v^3
+\end{equation}
+
+\section{MAC Layer Design}
+
+The Medium Access Control (MAC) layer coordinates access to the shared wireless medium to prevent collisions. We implement the IEEE 802.11 Distributed Coordination Function (DCF) without RTS/CTS.
+
+\subsection{CSMA/CA State Machine}
+The Carrier Sense Multiple Access with Collision Avoidance (CSMA/CA) protocol follows a rigorous state machine implemented in `mac/csma\_ca.py`:
+
+\begin{enumerate}
+    \item \textbf{Idle State}: The node has no data to send.
+    \item \textbf{Carrier Sense}: Upon receiving a packet, the node senses the channel.
+    \begin{itemize}
+        \item If \textit{Idle} for \texttt{DIFS\_DURATION} (SIFS + 2*Slot), transmit immediately.
+        \item If \textit{Busy}, initiate Backoff.
+    \end{itemize}
+    \item \textbf{Backoff}: The node selects a random backoff counter from $[0, CW]$. The counter decrements only when the channel is idle.
+    \begin{equation}
+        CW = (CW_{min} + 1) \times 2^{attempts-1} - 1
+    \end{equation}
+    where $CW_{min} = 31$.
+    \item \textbf{Transmission}: When the counter reaches zero, the frame is transmitted.
+    \item \textbf{ACK Wait}: The node waits for an ACK frame for \texttt{ACK\_TIMEOUT}.
+    \begin{itemize}
+        \item If ACK received: Success. Reset $CW$ to $CW_{min}$.
+        \item If Timeout: Collision assumed. Double $CW$ and retry up to \texttt{MAX\_RETRANSMISSION\_ATTEMPT} (5).
+    \end{itemize}
+\end{enumerate}
+
+\begin{lstlisting}[language=Python, caption=CSMA/CA Backoff Logic]
+# mac/csma_ca.py
+
+def mac_send(self, pkd):
+    # Calculate Contention Window
+    transmission_attempt = pkd.number_retransmission_attempt[self.my_drone.identifier]
+    contention_window = (config.CW_MIN + 1) * (2 ** (transmission_attempt-1)) - 1
+    
+    # Random Backoff
+    backoff = self.rng_mac.randint(0, contention_window - 1) * config.SLOT_DURATION
+    to_wait = config.DIFS_DURATION + backoff
+    
+    while to_wait:
+        # Wait for idle channel
+        yield self.env.process(self.wait_idle_channel(...))
+        
+        # Start listening/countdown
+        start_time = self.env.now
+        try:
+            yield self.env.timeout(to_wait)
+            # Success: Transmit
+            self.phy.unicast(pkd, next_hop_id)
+        except simpy.Interrupt:
+            # Interrupted by busy channel, freeze backoff
+            already_wait = self.env.now - start_time
+            to_wait -= already_wait
+\end{lstlisting}
+
+\section{Network Layer Design}
+
+The Network Layer handles end-to-end routing. We implement the Ad hoc On-Demand Distance Vector (AODV) protocol, a reactive protocol well-suited for dynamic topologies.
+
+\subsection{AODV Protocol Details}
+
+\subsubsection{Data Structures}
+The routing table in `aodv.py` maps a `dest\_id` to a dictionary containing:
+\begin{itemize}
+    \item \texttt{next\_hop}: The immediate neighbor to forward packets to.
+    \item \texttt{hop\_count}: Distance to destination.
+    \item \texttt{seq\_num}: Destination sequence number for loop freedom.
+    \item \texttt{expiry\_time}: Timestamp when the route becomes invalid.
+\end{itemize}
+
+\subsubsection{Route Discovery}
+When a source $S$ needs to send a packet to destination $D$ and has no route:
+\begin{enumerate}
+    \item $S$ broadcasts a \textbf{Route Request (RREQ)} containing:
+    \texttt{<Source\_ID, Dest\_ID, Source\_Seq, Dest\_Seq, Hop\_Count, Broadcast\_ID>}
+    \item Intermediate nodes check `seen\_rreqs` to avoid duplicates. If new, they create a \textit{reverse route} to $S$.
+    \item When the RREQ reaches $D$ (or a node with a valid route to $D$), a \textbf{Route Reply (RREP)} is unicasted back.
+    \item As the RREP travels back, intermediate nodes set up \textit{forward routes} to $D$.
+\end{enumerate}
+
+\subsubsection{Route Maintenance}
+Routes have a lifetime defined by \texttt{ACTIVE\_ROUTE\_TIMEOUT} (3.0s). If a link break is detected (via MAC ACK timeout), the `penalize()` function is called, which:
+\begin{enumerate}
+    \item Identifies all destinations reachable via the broken link.
+    \item Removes them from the routing table.
+    \item Generates a \textbf{Route Error (RERR)} packet to notify upstream nodes.
+\end{enumerate}
+
+\begin{lstlisting}[language=Python, caption=AODV Route Request Handling]
+# routing/aodv/aodv.py
+
+def handle_rreq(self, rreq, sender_id):
+    # 1. Check duplicates
+    if (rreq.src_drone.identifier, rreq.broadcast_id) in self.seen_rreqs:
+        return
+        
+    # 2. Update reverse route to Source
+    self.update_route(rreq.src_drone.identifier, sender_id, rreq.hop_count + 1, rreq.src_seq)
+    
+    # 3. Check if I am Dest or have fresh route
+    if rreq.dest_id == self.my_drone.identifier or has_fresh_route:
+        self.send_rrep(rreq, is_dest)
+    else:
+        # 4. Forward RREQ
+        rreq.hop_count += 1
+        self.my_drone.transmitting_queue.put(rreq)
+\end{lstlisting}
+
+\section{Mobility \& Topology Models}
+
+\subsection{3D Random Waypoint Model}
+The Random Waypoint (RWP) model is the standard benchmark. A node chooses a destination $P_{dest} = (x, y, z)$ uniformly within the simulation bounds ($600 \times 600 \times 100$ m) and a speed $v$. It moves to $P_{dest}$, pauses for a random duration, and repeats.
+
+\subsection{Leader-Follower Formation}
+This model simulates swarm behavior. A leader node follows RWP, while follower nodes $i$ maintain a target position $P_i(t)$ relative to the leader $P_L(t)$:
+\begin{equation}
+    P_i(t) = P_L(t) + \Delta_i
+\end{equation}
+where $\Delta_i$ is the offset vector (e.g., $[-50, -50, 0]$). The simulator implements a smooth convergence algorithm where followers adjust their velocity vector to minimize the positional error.
+
+\section{GUI \& Visualization}
+
+The visualization engine is decoupled from the simulation logic to ensure performance.
+
+\subsection{Technology Stack}
+\begin{itemize}
+    \item \textbf{PyQt6}: Manages the application window, controls, and event loop.
+    \item \textbf{PyOpenGL / PyQtGraph}: Handles hardware-accelerated 3D rendering.
+\end{itemize}
+
+\subsection{Rendering Pipeline}
+\begin{enumerate}
+    \item \textbf{Simulation Step}: The simulator advances time and updates drone coordinates.
+    \item \textbf{Data Fetch}: The GUI thread queries the simulator for the current state.
+    \item \textbf{Scene Update}:
+    \begin{itemize}
+        \item \textbf{Nodes}: Rendered as GLMeshItems (spheres). Color is interpolated based on energy level (Green $>50\%$, Yellow $>20\%$, Red $<20\%$).
+        \item \textbf{Links}: Rendered as GLLinePlotItems. Only links between neighbors (within communication range) are drawn.
+    \end{itemize}
+    \item \textbf{Draw}: The OpenGL context swaps buffers to display the new frame.
+\end{enumerate}
+
+\section{Experiments and Evaluation Plan}
+
+\subsection{E1: Mobility vs. Latency}
+\textbf{Objective}: Determine the correlation between node velocity and end-to-end latency.
+\begin{itemize}
+    \item \textbf{Setup}: 25 nodes in a $600 \times 600 \times 100$ m area.
+    \item \textbf{Independent Variable}: Speed ($0, 10, 20, 30, 40, 50$ m/s).
+    \item \textbf{Dependent Variable}: Average packet latency (ms).
+    \item \textbf{Analysis}: We expect latency to increase with speed due to frequent route breakages requiring new RREQ/RREP cycles.
+\end{itemize}
+
+\subsection{E2: Energy-Throughput Tradeoff}
+\textbf{Objective}: Analyze the cost of high throughput in terms of energy.
+\begin{itemize}
+    \item \textbf{Setup}: Static network to isolate traffic effects.
+    \item \textbf{Independent Variable}: Packet Generation Rate ($\lambda \in \{1, 5, 10, 20, 50\}$ packets/sec).
+    \item \textbf{Dependent Variables}: Throughput (kbps), Energy Consumption (Joules).
+    \item \textbf{Analysis}: Identify the saturation point where increasing $\lambda$ yields diminishing returns in throughput while linearly increasing energy cost.
+\end{itemize}
+
+\subsection{E3: Formation Transition Dynamics}
+\textbf{Objective}: Evaluate network stability during topological reconfiguration.
+\begin{itemize}
+    \item \textbf{Setup}: Simulation runs for 600s. At $t=300s$, mobility switches from RWP to V-Formation.
+    \item \textbf{Metrics}: Packet Delivery Ratio (PDR) and Control Overhead (RREQ packets).
+    \item \textbf{Analysis}: We analyze the transient response—specifically the depth of the PDR dip and the settling time required for the network to stabilize in the new formation.
+\end{itemize}
+
+\section{Conclusion}
+UavNetSim provides a robust platform for researching UAV networks. By combining detailed physical layer modeling with standard protocol implementations and realistic mobility, it enables researchers to gain deep insights into the performance trade-offs inherent in FANETs. The modular design ensures that future protocols and models can be integrated with minimal effort.
+
+\begin{thebibliography}{9}
+\bibitem{uavnetsim}
+Z. Zhou, Z. Dai, L. Huang, C. Yang, Y. Xiang, J. Tang, and K. Wong, 
+``UavNetSim-v1: A Python-based Simulation Platform for UAV Communication Networks,'' 
+\textit{arXiv preprint arXiv:2507.09852}, 2025.
+\end{thebibliography}
+
+\end{document}
